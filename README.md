@@ -1,140 +1,219 @@
-# ritual-node
-Guide Ritual Node
+# Ritual Infernet Node Setup
 
-0. Register wallet:
+## 0. Register wallet:
 https://basescan.org/address/0x8d871ef2826ac9001fb2e33fdd6379b6aabf449c#writeContract
 
-1. Preparations:
+## 1. Install Packages & Tools:
 ```Bash
-sudo apt update && sudo apt upgrade -y
-sudo apt install -y curl git jq lz4 build-essential screen
+sudo apt update & sudo apt upgrade -y
+sudo apt install ca-certificates zlib1g-dev libncurses5-dev libgdbm-dev libnss3-dev curl git wget make jq build-essential pkg-config lsb-release libssl-dev libreadline-dev libffi-dev gcc screen unzip lz4 -y
 ```
+## 2. Install Docker:
+```Bash
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
 
-3. Install Docker & Docker Compose:
-```Bash
-sudo apt update && sudo apt install apt-transport-https ca-certificates curl software-properties-common -y && curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add - && sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu focal stable" && sudo apt-get install docker-ce docker-ce-cli containerd.io docker-compose-plugin && sudo apt-get install docker-compose-plugin
-```
-```Bash
-sudo apt install git-all
-```
-```Bash
-sudo apt-get remove docker docker-engine docker.io containerd runc
-```
-```Bash
-sudo apt-get update
-```
-```Bash
-sudo apt-get install ca-certificates curl gnupg lsb-release
-```
-```Bash
-sudo mkdir -m 0755 -p /etc/apt/keyrings
-```
-```Bash
-curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg 
-echo  "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
-```
-```Bash
-sudo apt-get update
-```
-```Bash
-sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
-```
-```Bash
-sudo docker run hello-world
-```
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
 
-3. Clone The Starter Repository:
+sudo apt-get update
+sudo apt-get install docker-ce docker-ce-cli containerd.io
+docker version
+```
+## 3. Install Docker Compose:
+```Bash
+VER=$(curl -s https://api.github.com/repos/docker/compose/releases/latest | grep tag_name | cut -d '"' -f 4)
+
+curl -L "https://github.com/docker/compose/releases/download/"$VER"/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+
+chmod +x /usr/local/bin/docker-compose
+docker-compose --version
+```
+## 4. Starter Repository:
 ```Bash
 git clone https://github.com/ritual-net/infernet-container-starter && cd infernet-container-starter
 ```
-
-5. Run The hello-world Container:
+## 5. Node Configuration:
+- container/config.json
 ```Bash
-sudo apt install screen
+nano ~/infernet-container-starter/projects/hello-world/container/config.json
 ```
+Edit file `config.json` with `your-private-key (include prefix 0x)` as in the code below. 
+(Ctrl + X, Y and Enter will do to save)
 ```Bash
-sudo screen -S ritual
+{
+    "log_path": "infernet_node.log",
+    "server": {
+        "port": 4000,
+        "rate_limit": {
+            "num_requests": 100,
+            "period": 100
+        }
+    },
+    "chain": {
+        "enabled": true,
+        "trail_head_blocks": 3,
+        "rpc_url": "https://mainnet.base.org/",
+        "registry_address": "0x3B1554f346DFe5c482Bb4BA31b880c1C18412170",
+        "wallet": {
+            "max_gas_limit": 4000000,
+            "private_key": "0x+<your-private-key>",
+            "allowed_sim_errors": []
+        },
+        "snapshot_sync": {
+            "sleep": 3,
+            "batch_size": 1800,
+            "starting_sub_id": 0
+        }
+    },
+    "startup_wait": 1.0,
+    "docker": {
+        "username": "your-username",
+        "password": ""
+    },
+    "redis": {
+        "host": "redis",
+        "port": 6379
+    },
+    "forward_stats": true,
+    "containers": [
+        {
+            "id": "hello-world",
+            "image": "ritualnetwork/infernet-node:1.2.0",
+            "external": true,
+            "port": "3000",
+            "allowed_delegate_addresses": [],
+            "allowed_addresses": [],
+            "allowed_ips": [],
+            "command": "--bind=0.0.0.0:3000 --workers=2",
+            "env": {},
+            "volumes": [],
+            "accepted_payments": {},
+            "generates_proofs": false
+        }
+    ]
+}
+```
+- contracts/script/Deploy.s.sol
+```Bash
+nano ~/infernet-container-starter/projects/hello-world/contracts/script/Deploy.s.sol
+```
+Edit file `Deploy.s.sol` as in the code below. 
+(Ctrl + X, Y and Enter will do to save)
+```Bash
+// SPDX-License-Identifier: BSD-3-Clause-Clear
+pragma solidity ^0.8.13;
+
+import {Script, console2} from "forge-std/Script.sol";
+import {SaysGM} from "../src/SaysGM.sol";
+
+contract Deploy is Script {
+    function run() public {
+        // Setup wallet
+        uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
+        vm.startBroadcast(deployerPrivateKey);
+
+        // Log address
+        address deployerAddress = vm.addr(deployerPrivateKey);
+        console2.log("Loaded deployer: ", deployerAddress);
+
+        address registry = 0x3B1554f346DFe5c482Bb4BA31b880c1C18412170;
+        // Create consumer
+        SaysGM saysGm = new SaysGM(registry);
+        console2.log("Deployed SaysHello: ", address(saysGm));
+
+        // Execute
+        vm.stopBroadcast();
+        vm.broadcast();
+    }
+}
+```
+- contracts/Makefile
+```Bash
+nano ~/infernet-container-starter/projects/hello-world/contracts/Makefile
+```
+Edit file `Makefile` with `your-private-key (include prefix 0x)` as in the code below. 
+(Ctrl + X, Y and Enter will do to save)
+```Bash
+# phony targets are targets that don't actually create a file
+.phony: deploy
+
+# anvil's third default address
+sender := 0x+<your-private-key>
+RPC_URL := https://mainnet.base.org/
+
+# deploying the contract
+deploy:
+	@PRIVATE_KEY=$(sender) forge script script/Deploy.s.sol:Deploy --broadcast --rpc-url $(RPC_URL)
+
+# calling sayGM()
+call-contract:
+	@PRIVATE_KEY=$(sender) forge script script/CallContract.s.sol:CallContract --broadcast --rpc-url $(RPC_URL)
+```
+## 6. Running hello-world:
+```Bash
+screen -S ritual
 ```
 ```Bash
 project=hello-world make deploy-container
 ```
-Exit= Ctrl + A + D
--Check docker
-docker container ls
-
-**Change port:
-nano ~/infernet-container-starter/deploy/docker-compose.yaml
->>> (4000 > 5000)
-
-**Save wallet_factory address: 0x.......
-
-5. Change The Configuration:
+Detach from your session with:: CTRL + A + D
+## 7. Docker containers:
 ```Bash
-rm  ~/infernet-container-starter/deploy/config.json && nano ~/infernet-container-starter/deploy/config.json
+docker container ls
 ```
-
-nano ~/infernet-container-starter/projects/hello-world/container/config.json
->>Change:
-"rpc_url": "https://base-rpc.publicnode.com"
-"registry_address": "0x3B1554f346DFe5c482Bb4BA31b880c1C18412170"
-"private_key": "0x + your wallet's private key"
-"image": "ritualnetwork/infernet-node:1.0.0"
-"allowed_addresses": "0xF6168876932289D073567f347121A267095f3DD6"
-
-
-nano ~/infernet-container-starter/projects/hello-world/contracts/Makefile
->>Change:
-"sender" = 0x + your wallet's private key
-"RPC_URL" to: https://base-rpc.publicnode.com
-
-nano ~/infernet-container-starter/projects/hello-world/contracts/script/Deploy.s.sol
->>Change:
-address registry = 0x3B1554f346DFe5c482Bb4BA31b880c1C18412170;
-sGM saysGm = new SaysGM(registry);
-
-6. Update version:
-nano ~/infernet-container-starter/deploy/docker-compose.yaml
-*If=1.0.0 >> OK
-
-cd infernet-container-starter/deploy
-docker compose down && docker compose up -d
-
-7. Update containers:
+## 8. Initialize Configuration:
+```Bash
+docker compose -f deploy/docker-compose.yaml down && docker compose -f deploy/docker-compose.yaml up -d
+```
+```Bash
 docker restart infernet-anvil
 docker restart hello-world
 docker restart infernet-node
 docker restart deploy-fluentbit-1
 docker restart deploy-redis-1
-
-8. install foundery
+```
+```Bash
+docker ps
+```
+You can now check if changes are active via (replace <Container ID> with ID of deploy-node-1 container.
+```Bash
+docker logs infernet-node
+```
+## 9. Install Foundry:
+```Bash
 cd
 mkdir foundry && cd foundry
 curl -L https://foundry.paradigm.xyz | bash
 source ~/.bashrc
 foundryup
-
-**Remove old data:
-cd ~/infernet-container-starter/projects/hello-world/contracts/lib
-rm -rf forge-std
-rm -rf infernet-sdk
-
--Run....
+```
+## 10. Installing required libraries and SDKs:
+- Remove old data:
+```Bash
+rm -rf ~/infernet-container-starter/projects/hello-world/contracts/lib/forge-std
+rm -rf ~/infernet-container-starter/projects/hello-world/contracts/lib/infernet-sdk
+```
+- Installing
+```Bash
 cd
 cd ~/infernet-container-starter/projects/hello-world/contracts
 forge install --no-commit foundry-rs/forge-std
 forge install --no-commit ritual-net/infernet-sdk
 cd ../../../
-
-9. Deploy contracts:
+```
+## 11. Deploy Consumer Contract:
+```Bash
 cd infernet-container-starter && project=hello-world make deploy-contracts
+```
+* Contract Address:  0x... (Your-Contract)
 
->>Save Deployed SaysHello:  0xcxxxxxx
-
+## 12. Call Contract:
+```Bash
 nano ~/infernet-container-starter/projects/hello-world/contracts/script/CallContract.s.sol
-
-- Chang "Deployed SaysHello" = 0xcxxxxxx
-10. Start:
+```
+Change `CallContract.s.sol` with `SaysGM saysGm = SaysGM(Your-Contract)`
+(Ctrl + X, Y and Enter will do to save)
+```Bash
 make call-contract project=hello-world
-
-----------THE END----------------------------------
+```
+# ----------THE END----------------------------------
 
