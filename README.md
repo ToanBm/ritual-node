@@ -34,7 +34,7 @@ git clone https://github.com/ritual-net/infernet-container-starter && cd inferne
 ## 5. Node Configuration:
 - container/config.json
 ```Bash
-nano ~/infernet-container-starter/projects/hello-world/container/config.json
+rm ~/infernet-container-starter/projects/hello-world/container/config.json && nano ~/infernet-container-starter/projects/hello-world/container/config.json
 ```
 Edit file `config.json` with `your-private-key (include prefix 0x)` as in the code below. 
 (Ctrl + X, Y and Enter will do to save)
@@ -94,7 +94,7 @@ Edit file `config.json` with `your-private-key (include prefix 0x)` as in the co
 ```
 - contracts/script/Deploy.s.sol
 ```Bash
-nano ~/infernet-container-starter/projects/hello-world/contracts/script/Deploy.s.sol
+rm ~/infernet-container-starter/projects/hello-world/contracts/script/Deploy.s.sol && nano ~/infernet-container-starter/projects/hello-world/contracts/script/Deploy.s.sol
 ```
 Edit file `Deploy.s.sol` as in the code below. 
 (Ctrl + X, Y and Enter will do to save)
@@ -128,7 +128,7 @@ contract Deploy is Script {
 ```
 - contracts/Makefile
 ```Bash
-nano ~/infernet-container-starter/projects/hello-world/contracts/Makefile
+rm ~/infernet-container-starter/projects/hello-world/contracts/Makefile && nano ~/infernet-container-starter/projects/hello-world/contracts/Makefile
 ```
 Edit file `Makefile` with `your-private-key (include prefix 0x)` as in the code below. 
 (Ctrl + X, Y and Enter will do to save)
@@ -201,8 +201,9 @@ forge install --no-commit ritual-net/infernet-sdk
 cd ../../../
 ```
 ## 11. Deploy Consumer Contract:
+* In `infernet-container-starter` folder
 ```Bash
-cd infernet-container-starter && project=hello-world make deploy-contracts
+project=hello-world make deploy-contracts
 ```
 * Contract Address:  0x... (Your-Contract)
 
