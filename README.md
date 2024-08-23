@@ -32,7 +32,7 @@ docker-compose --version
 git clone https://github.com/ritual-net/infernet-container-starter && cd infernet-container-starter
 ```
 ## 5. Node Configuration:
-- container/config.json
+### - container/config.json
 ```Bash
 rm ~/infernet-container-starter/projects/hello-world/container/config.json && nano ~/infernet-container-starter/projects/hello-world/container/config.json
 ```
@@ -77,7 +77,7 @@ Edit file `config.json` with `your-private-key (include prefix 0x)` as in the co
     "containers": [
         {
             "id": "hello-world",
-            "image": "ritualnetwork/infernet-node:1.2.0",
+            "image": "ritualnetwork/hello-world-infernet:latest",
             "external": true,
             "port": "3000",
             "allowed_delegate_addresses": [],
@@ -92,7 +92,7 @@ Edit file `config.json` with `your-private-key (include prefix 0x)` as in the co
     ]
 }
 ```
-- contracts/script/Deploy.s.sol
+### - contracts/script/Deploy.s.sol
 ```Bash
 rm ~/infernet-container-starter/projects/hello-world/contracts/script/Deploy.s.sol && nano ~/infernet-container-starter/projects/hello-world/contracts/script/Deploy.s.sol
 ```
@@ -126,7 +126,7 @@ contract Deploy is Script {
     }
 }
 ```
-- contracts/Makefile
+### - contracts/Makefile
 ```Bash
 rm ~/infernet-container-starter/projects/hello-world/contracts/Makefile && nano ~/infernet-container-starter/projects/hello-world/contracts/Makefile
 ```
@@ -148,6 +148,77 @@ deploy:
 call-contract:
 	@PRIVATE_KEY=$(sender) forge script script/CallContract.s.sol:CallContract --broadcast --rpc-url $(RPC_URL)
 ```
+### - docker-compose.yaml
+```Bash
+rm ~/infernet-container-starter/deploy/docker-compose.yaml && nano ~/infernet-container-starter/deploy/docker-compose.yaml
+```
+Edit file `docker-compose.yaml` with `as in the code below.
+(Ctrl + X, Y and Enter will do to save)
+```Bash
+services:
+  node:
+    image: ritualnetwork/infernet-node:1.2.0
+    ports:
+      - "0.0.0.0:4000:4000"
+    volumes:
+      - ./config.json:/app/config.json
+      - node-logs:/logs
+      - /var/run/docker.sock:/var/run/docker.sock
+    tty: true
+    networks:
+      - network
+    depends_on:
+      - redis
+      - infernet-anvil
+    restart:
+      on-failure
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    stop_grace_period: 1m
+    container_name: infernet-node
+
+  redis:
+    image: redis:7.4.0
+    ports:
+    - "6379:6379"
+    networks:
+      - network
+    volumes:
+      - ./redis.conf:/usr/local/etc/redis/redis.conf
+      - redis-data:/data
+    restart:
+      on-failure
+
+  fluentbit:
+    image: fluent/fluent-bit:3.1.4
+    expose:
+      - "24224"
+    environment:
+      - FLUENTBIT_CONFIG_PATH=/fluent-bit/etc/fluent-bit.conf
+    volumes:
+      - ./fluent-bit.conf:/fluent-bit/etc/fluent-bit.conf
+      - /var/log:/var/log:ro
+    networks:
+      - network
+    restart:
+      on-failure
+
+  infernet-anvil:
+    image: ritualnetwork/infernet-anvil:1.0.0
+    command: --host 0.0.0.0 --port 3000 --load-state infernet_deployed.json -b 1
+    ports:
+      - "8545:3000"
+    networks:
+      - network
+    container_name: infernet-anvil
+
+networks:
+  network:
+
+volumes:
+  node-logs:
+  redis-data:
+```
 ## 6. Running hello-world:
 ```Bash
 screen -S ritual
@@ -161,23 +232,30 @@ Detach from your session with:: CTRL + A + D
 docker container ls
 ```
 ## 8. Initialize Configuration:
+### - Restart node:
 ```Bash
 docker compose -f deploy/docker-compose.yaml down && docker compose -f deploy/docker-compose.yaml up -d
 ```
-```Bash
-docker restart infernet-anvil
-docker restart hello-world
-docker restart infernet-node
-docker restart deploy-fluentbit-1
-docker restart deploy-redis-1
-```
+### - Check log:
 ```Bash
 docker ps
 ```
-You can now check if changes are active via (replace <Container ID> with ID of deploy-node-1 container.
 ```Bash
-docker logs infernet-node
+docker logs -f infernet-anvil
 ```
+```Bash
+docker logs -f hello-world
+```
+```Bash
+docker logs -f infernet-node
+```
+```Bash
+docker logs -f deploy-fluentbit-1
+```
+```Bash
+docker logs -f deploy-redis-1
+```
+### Ctrl + C to exit log.
 ## 9. Install Foundry:
 ```Bash
 cd
@@ -187,12 +265,12 @@ source ~/.bashrc
 foundryup
 ```
 ## 10. Installing required libraries and SDKs:
-- Remove old data:
+### - Remove old data:
 ```Bash
 rm -rf ~/infernet-container-starter/projects/hello-world/contracts/lib/forge-std
 rm -rf ~/infernet-container-starter/projects/hello-world/contracts/lib/infernet-sdk
 ```
-- Installing
+### - Installing
 ```Bash
 cd
 cd ~/infernet-container-starter/projects/hello-world/contracts
@@ -201,7 +279,7 @@ forge install --no-commit ritual-net/infernet-sdk
 cd ../../../
 ```
 ## 11. Deploy Consumer Contract:
-* In `infernet-container-starter` folder
+### In `infernet-container-starter` folder
 ```Bash
 project=hello-world make deploy-contracts
 ```
@@ -216,5 +294,5 @@ Change `CallContract.s.sol` with `SaysGM saysGm = SaysGM(Your-Contract)`
 ```Bash
 make call-contract project=hello-world
 ```
-# ----------THE END----------------------------------
+##                    ----------THE END--------------
 
