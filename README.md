@@ -204,7 +204,7 @@ services:
       on-failure
 
   infernet-anvil:
-    image: ritualnetwork/infernet-anvil:1.2.0
+    image: ritualnetwork/infernet-anvil:1.0.0
     command: --host 0.0.0.0 --port 3000 --load-state infernet_deployed.json -b 1
     ports:
       - "8545:3000"
