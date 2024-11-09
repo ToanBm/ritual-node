@@ -94,7 +94,8 @@ docker container ls
 ## 8. Initialize Configuration:
 ### - Restart node:
 ```Bash
-docker compose -f deploy/docker-compose.yaml down && docker compose -f deploy/docker-compose.yaml up -d
+cd
+docker compose -f infernet-container-starter/deploy/docker-compose.yaml down && docker compose -f infernet-container-starter/deploy/docker-compose.yaml up -d
 ```
 ### - Check log:
 ```Bash
