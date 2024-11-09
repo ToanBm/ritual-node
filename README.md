@@ -58,7 +58,7 @@ nano ~/infernet-container-starter/projects/hello-world/contracts/script/Deploy.s
 Edit file `Deploy.s.sol` as in the code below. 
 (Ctrl + X, Y and Enter will do to save)
 ```Bash
-
+??????
 ```
 ### - contracts/Makefile
 ```Bash
@@ -78,6 +78,7 @@ Edit file `docker-compose.yaml` with `as in the code below.
 (Ctrl + X, Y and Enter will do to save)
 ```Bash
 image: ritualnetwork/infernet-node:1.4.0
+change port: 8545 > 8585
 ```
 ## 6. Running hello-world:
 ```Bash
