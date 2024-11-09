@@ -34,190 +34,50 @@ git clone https://github.com/ritual-net/infernet-container-starter && cd inferne
 ## 5. Node Configuration:
 ### - container/config.json
 ```Bash
-rm ~/infernet-container-starter/projects/hello-world/container/config.json && nano ~/infernet-container-starter/projects/hello-world/container/config.json
+nano ~/infernet-container-starter/deploy/config.json
+```
+```Bash
+nano ~/infernet-container-starter/projects/hello-world/container/config.json
 ```
 Edit file `config.json` with `your-private-key (include prefix 0x)` as in the code below. 
 (Ctrl + X, Y and Enter will do to save)
 ```Bash
-{
-    "log_path": "infernet_node.log",
-    "server": {
-        "port": 4000,
-        "rate_limit": {
-            "num_requests": 100,
-            "period": 100
-        }
-    },
-    "chain": {
-        "enabled": true,
-        "trail_head_blocks": 3,
-        "rpc_url": "https://mainnet.base.org/",
-        "registry_address": "0x3B1554f346DFe5c482Bb4BA31b880c1C18412170",
-        "wallet": {
-            "max_gas_limit": 4000000,
-            "private_key": "0x+<your-private-key>",
-            "allowed_sim_errors": []
-        },
-        "snapshot_sync": {
-            "sleep": 3,
-            "batch_size": 1800,
-            "starting_sub_id": 0
-        }
-    },
-    "startup_wait": 1.0,
+-RPC URL: https://mainnet.base.org/
+-Private Key: Enter your private key (throwaway wallet). Add “0x” to your key if it does not start with 0x.
+-Registry: Check via Deployed Contracts, at the moment it is this address 0x3B1554f346DFe5c482Bb4BA31b880c1C18412170
+-Remove this lines:
     "docker": {
-        "username": "your-username",
+        "username": "username",
         "password": ""
     },
-    "redis": {
-        "host": "redis",
-        "port": 6379
-    },
-    "forward_stats": true,
-    "containers": [
-        {
-            "id": "hello-world",
-            "image": "ritualnetwork/hello-world-infernet:latest",
-            "external": true,
-            "port": "3000",
-            "allowed_delegate_addresses": [],
-            "allowed_addresses": [],
-            "allowed_ips": [],
-            "command": "--bind=0.0.0.0:3000 --workers=2",
-            "env": {},
-            "volumes": [],
-            "accepted_payments": {},
-            "generates_proofs": false
-        }
-    ]
-}
 ```
 ### - contracts/script/Deploy.s.sol
 ```Bash
-rm ~/infernet-container-starter/projects/hello-world/contracts/script/Deploy.s.sol && nano ~/infernet-container-starter/projects/hello-world/contracts/script/Deploy.s.sol
+nano ~/infernet-container-starter/projects/hello-world/contracts/script/Deploy.s.sol
 ```
 Edit file `Deploy.s.sol` as in the code below. 
 (Ctrl + X, Y and Enter will do to save)
 ```Bash
-// SPDX-License-Identifier: BSD-3-Clause-Clear
-pragma solidity ^0.8.13;
 
-import {Script, console2} from "forge-std/Script.sol";
-import {SaysGM} from "../src/SaysGM.sol";
-
-contract Deploy is Script {
-    function run() public {
-        // Setup wallet
-        uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
-        vm.startBroadcast(deployerPrivateKey);
-
-        // Log address
-        address deployerAddress = vm.addr(deployerPrivateKey);
-        console2.log("Loaded deployer: ", deployerAddress);
-
-        address registry = 0x3B1554f346DFe5c482Bb4BA31b880c1C18412170;
-        // Create consumer
-        SaysGM saysGm = new SaysGM(registry);
-        console2.log("Deployed SaysHello: ", address(saysGm));
-
-        // Execute
-        vm.stopBroadcast();
-        vm.broadcast();
-    }
-}
 ```
 ### - contracts/Makefile
 ```Bash
-rm ~/infernet-container-starter/projects/hello-world/contracts/Makefile && nano ~/infernet-container-starter/projects/hello-world/contracts/Makefile
+nano ~/infernet-container-starter/projects/hello-world/contracts/Makefile
 ```
 Edit file `Makefile` with `your-private-key (include prefix 0x)` as in the code below. 
 (Ctrl + X, Y and Enter will do to save)
 ```Bash
-# phony targets are targets that don't actually create a file
-.phony: deploy
-
-# anvil's third default address
 sender := 0x+<your-private-key>
 RPC_URL := https://mainnet.base.org/
-
-# deploying the contract
-deploy:
-	@PRIVATE_KEY=$(sender) forge script script/Deploy.s.sol:Deploy --broadcast --rpc-url $(RPC_URL)
-
-# calling sayGM()
-call-contract:
-	@PRIVATE_KEY=$(sender) forge script script/CallContract.s.sol:CallContract --broadcast --rpc-url $(RPC_URL)
 ```
 ### - docker-compose.yaml
 ```Bash
-rm ~/infernet-container-starter/deploy/docker-compose.yaml && nano ~/infernet-container-starter/deploy/docker-compose.yaml
+nano ~/infernet-container-starter/deploy/docker-compose.yaml
 ```
 Edit file `docker-compose.yaml` with `as in the code below.
 (Ctrl + X, Y and Enter will do to save)
 ```Bash
-services:
-  node:
-    image: ritualnetwork/infernet-node:1.2.0
-    ports:
-      - "0.0.0.0:4000:4000"
-    volumes:
-      - ./config.json:/app/config.json
-      - node-logs:/logs
-      - /var/run/docker.sock:/var/run/docker.sock
-    tty: true
-    networks:
-      - network
-    depends_on:
-      - redis
-      - infernet-anvil
-    restart:
-      on-failure
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-    stop_grace_period: 1m
-    container_name: infernet-node
-
-  redis:
-    image: redis:7.4.0
-    ports:
-    - "6379:6379"
-    networks:
-      - network
-    volumes:
-      - ./redis.conf:/usr/local/etc/redis/redis.conf
-      - redis-data:/data
-    restart:
-      on-failure
-
-  fluentbit:
-    image: fluent/fluent-bit:3.1.4
-    expose:
-      - "24224"
-    environment:
-      - FLUENTBIT_CONFIG_PATH=/fluent-bit/etc/fluent-bit.conf
-    volumes:
-      - ./fluent-bit.conf:/fluent-bit/etc/fluent-bit.conf
-      - /var/log:/var/log:ro
-    networks:
-      - network
-    restart:
-      on-failure
-
-  infernet-anvil:
-    image: ritualnetwork/infernet-anvil:1.0.0
-    command: --host 0.0.0.0 --port 3000 --load-state infernet_deployed.json -b 1
-    ports:
-      - "8545:3000"
-    networks:
-      - network
-    container_name: infernet-anvil
-
-networks:
-  network:
-
-volumes:
-  node-logs:
-  redis-data:
+image: ritualnetwork/infernet-node:1.4.0
 ```
 ## 6. Running hello-world:
 ```Bash
@@ -250,10 +110,10 @@ docker logs -f hello-world
 docker logs -f infernet-node
 ```
 ```Bash
-docker logs -f deploy-fluentbit-1
+docker logs -f deploy-fluentbit
 ```
 ```Bash
-docker logs -f deploy-redis-1
+docker logs -f deploy-redis
 ```
 ### Ctrl + C to exit log.
 ## 9. Install Foundry:
