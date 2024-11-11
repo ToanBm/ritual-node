@@ -73,7 +73,7 @@ nano ~/infernet-container-starter/projects/hello-world/contracts/script/Deploy.s
 Edit file `Deploy.s.sol` as in the code below. 
 (Ctrl + X, Y and Enter will do to save)
 ```Bash
--Registry address: `0x3B1554f346DFe5c482Bb4BA31b880c1C18412170`
+-Registry address: 0x3B1554f346DFe5c482Bb4BA31b880c1C18412170
 ```
 ### - contracts/Makefile
 ```Bash
@@ -82,7 +82,7 @@ nano ~/infernet-container-starter/projects/hello-world/contracts/Makefile
 Edit file `Makefile` with `your-private-key (include prefix 0x)` as in the code below. 
 (Ctrl + X, Y and Enter will do to save)
 ```Bash
-sender := 0x+<your-private-key>
+sender := 0x<your-private-key>
 RPC_URL := https://mainnet.base.org/
 ```
 ### - docker-compose.yaml
@@ -129,6 +129,7 @@ docker logs -f hello-world
 cd
 mkdir foundry && cd foundry
 curl -L https://foundry.paradigm.xyz | bash
+export PATH="$HOME/.foundry/bin:$PATH"
 source ~/.bashrc
 foundryup
 ```
