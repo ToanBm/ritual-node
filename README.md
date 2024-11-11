@@ -50,9 +50,9 @@ nano ~/infernet-container-starter/projects/hello-world/container/config.json
 Edit file `config.json` with `your-private-key (include prefix 0x)` as in the code below. 
 (Ctrl + X, Y and Enter will do to save)
 ```Bash
--RPC URL: `https://mainnet.base.org/`
--Registry address: `0x3B1554f346DFe5c482Bb4BA31b880c1C18412170`
--Private Key: Enter your private key: `0x........`
+-RPC URL: https://mainnet.base.org/
+-Registry address: 0x3B1554f346DFe5c482Bb4BA31b880c1C18412170
+-Private Key: Enter your private key: 0x........
 -Edit the snapshot sync:
     "snapshot_sync": {
         "sleep": 3,
@@ -73,7 +73,7 @@ nano ~/infernet-container-starter/projects/hello-world/contracts/script/Deploy.s
 Edit file `Deploy.s.sol` as in the code below. 
 (Ctrl + X, Y and Enter will do to save)
 ```Bash
-??????
+-Registry address: `0x3B1554f346DFe5c482Bb4BA31b880c1C18412170`
 ```
 ### - contracts/Makefile
 ```Bash
@@ -95,14 +95,6 @@ Edit file `docker-compose.yaml` with `as in the code below.
 image: ritualnetwork/infernet-node:1.4.0
 change port: 8545 > 8585
 ```
-## 6. Running hello-world:
-```Bash
-screen -S ritual
-```
-```Bash
-project=hello-world make deploy-container
-```
-Detach from your session with:: CTRL + A + D
 ## 7. Docker containers:
 ```Bash
 docker container ls
@@ -110,27 +102,26 @@ docker container ls
 ## 8. Initialize Configuration:
 ### - Restart node:
 ```Bash
-cd
-docker compose -f infernet-container-starter/deploy/docker-compose.yaml down && docker compose -f infernet-container-starter/deploy/docker-compose.yaml up -d
+cd && docker compose -f infernet-container-starter/deploy/docker-compose.yaml down && docker compose -f infernet-container-starter/deploy/docker-compose.yaml up -d
 ```
 ### - Check log:
 ```Bash
 docker ps
 ```
 ```Bash
-docker logs -f infernet-anvil
-```
-```Bash
-docker logs -f hello-world
-```
-```Bash
 docker logs -f infernet-node
 ```
 ```Bash
-docker logs -f deploy-fluentbit
+docker logs -f infernet-fluentbit
 ```
 ```Bash
-docker logs -f deploy-redis
+docker logs -f infernet-anvil
+```
+```Bash
+docker logs -f infernet-redis
+```
+```Bash
+docker logs -f hello-world
 ```
 ### Ctrl + C to exit log.
 ## 9. Install Foundry:
