@@ -31,7 +31,15 @@ docker-compose --version
 ```Bash
 git clone https://github.com/ritual-net/infernet-container-starter && cd infernet-container-starter
 ```
-## 5. Node Configuration:
+## 5. Running hello-world:
+```Bash
+screen -S ritual
+```
+```Bash
+project=hello-world make deploy-container
+```
+Detach from your session with:: CTRL + A + D
+## 6. Node Configuration:
 ### - container/config.json
 ```Bash
 nano ~/infernet-container-starter/deploy/config.json
@@ -42,9 +50,16 @@ nano ~/infernet-container-starter/projects/hello-world/container/config.json
 Edit file `config.json` with `your-private-key (include prefix 0x)` as in the code below. 
 (Ctrl + X, Y and Enter will do to save)
 ```Bash
--RPC URL: https://mainnet.base.org/
--Private Key: Enter your private key (throwaway wallet). Add “0x” to your key if it does not start with 0x.
--Registry: Check via Deployed Contracts, at the moment it is this address 0x3B1554f346DFe5c482Bb4BA31b880c1C18412170
+-RPC URL: `https://mainnet.base.org/`
+-Registry address: `0x3B1554f346DFe5c482Bb4BA31b880c1C18412170`
+-Private Key: Enter your private key: `0x........`
+-Edit the snapshot sync:
+    "snapshot_sync": {
+        "sleep": 3,
+        "starting_sub_id": 180000,
+        "batch_size": 800,
+        "sync_period": 30
+    },
 -Remove this lines:
     "docker": {
         "username": "username",
