@@ -38,6 +38,9 @@ screen -S ritual
 ```Bash
 project=hello-world make deploy-container
 ```
+```Bash
+docker logs infernet-node -f
+```
 Detach from your session with:: CTRL + A + D
 ## 6. Node Configuration:
 ### - container/config.json
