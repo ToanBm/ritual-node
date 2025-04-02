@@ -1,4 +1,11 @@
-#!/bin/bash
+# Restart docker containers
+  echo "Ensuring all containers are down before restart..."
+  cd ~/infernet-container-starter
+  docker compose -f deploy/docker-compose.yaml down
+  
+  # Remove containers manually if they exist
+  echo "Removing any remaining containers..."
+  docker rm -f infernet-fluentbit infernet-redis infernet-anvil infernet-node 2>/dev/null || true#!/bin/bash
 
 # Function to display logo
 display_logo() {
@@ -275,6 +282,208 @@ EOL
   # Start containers
   echo "Starting containers..."
   docker compose -f deploy/docker-compose.yaml up -d
+  sleep 2
+
+  # Stop containers (Thêm stop do lỗi anvil!!!)
+  docker compose -f deploy/docker-compose.yaml down
+  
+  # Install Foundry
+  echo "Installing Foundry..."
+  cd
+  mkdir -p foundry
+  cd foundry
+  
+  # Kill any running anvil processes
+  pkill anvil 2>/dev/null || true
+  sleep 2
+  
+  # Install Foundry
+  curl -L https://foundry.paradigm.xyz | bash
+  source ~/.bashrc
+  
+  echo "Executing foundryup..."
+  export PATH="$HOME/.foundry/bin:$PATH"
+  $HOME/.foundry/bin/foundryup || foundryup
+  
+  # Check if forge is in standard path, if not update PATH
+  if ! command -v forge &> /dev/null; then
+    echo "Adding Foundry to PATH..."
+    export PATH="$HOME/.foundry/bin:$PATH"
+    echo 'export PATH="$PATH:$HOME/.foundry/bin"' >> ~/.bashrc
+    
+    # Check if there's an old forge binary
+    if [ -f /usr/bin/forge ]; then
+      echo "Removing old forge binary..."
+      sudo rm /usr/bin/forge
+    fi
+  fi
+
+  # Start containers
+  echo "Starting containers..."
+  docker compose -f deploy/docker-compose.yaml up -d
+  sleep 2
+  
+  # Install libraries with proper error handling
+  echo "Installing required libraries..."
+  cd ~/infernet-container-starter/projects/hello-world/contracts
+  
+  # Remove existing libs if they exist
+  rm -rf lib/forge-std 2>/dev/null || true
+  rm -rf lib/infernet-sdk 2>/dev/null || true
+  
+  # Try installing with forge-std
+  echo "Installing forge-std..."
+  forge install --no-commit foundry-rs/forge-std || $HOME/.foundry/bin/forge install --no-commit foundry-rs/forge-std
+  
+  # Verify forge-std was installed
+  if [ ! -d "lib/forge-std" ]; then
+    echo "Retrying forge-std installation..."
+    rm -rf lib/forge-std 2>/dev/null || true
+    $HOME/.foundry/bin/forge install --no-commit foundry-rs/forge-std
+  fi
+  
+  # Try installing infernet-sdk
+  echo "Installing infernet-sdk..."
+  forge install --no-commit ritual-net/infernet-sdk || $HOME/.foundry/bin/forge install --no-commit ritual-net/infernet-sdk
+  
+  # Verify infernet-sdk was installed
+  if [ ! -d "lib/infernet-sdk" ]; then
+    echo "Retrying infernet-sdk installation..."
+    rm -rf lib/infernet-sdk 2>/dev/null || true
+    $HOME/.foundry/bin/forge install --no-commit ritual-net/infernet-sdk
+  fi
+  
+  # Return to root directory
+  cd ~/infernet-container-starter
+  
+  # Restart Docker containers again
+  echo "Restarting Docker containers one more time..."
+  docker compose -f deploy/docker-compose.yaml down
+  docker rm -f infernet-fluentbit infernet-redis infernet-anvil infernet-node 2>/dev/null || true
+  docker compose -f deploy/docker-compose.yaml up -d
+  
+  # Deploy consumer contract
+  echo "Deploying consumer contract..."
+  export PRIVATE_KEY="${private_key#0x}"  # Remove 0x prefix if present for foundry
+  cd ~/infernet-container-starter
+  
+  # Run deployment and capture output to extract contract address
+  echo "Running contract deployment and capturing address..."
+  deployment_output=$(project=hello-world make deploy-contracts 2>&1)
+  echo "$deployment_output" > ~/deployment-output.log
+  
+  # Extract contract address using grep and regex pattern
+  contract_address=$(echo "$deployment_output" | grep -oE "Contract Address: 0x[a-fA-F0-9]+" | awk '{print $3}')
+  
+  if [ -z "$contract_address" ]; then
+    echo "?? Could not extract contract address automatically."
+    echo "Please check ~/deployment-output.log and enter the contract address manually:"
+    read -p "Paste Your Address on basescan, Copy Smartcontract and paste Here (in format 0x...): " contract_address
+  else
+    echo "? Successfully extracted contract address: $contract_address"
+  fi
+  
+  # Save contract address for future use
+  echo "$contract_address" > ~/contract-address.txt
+  
+  # Update CallContract.s.sol with the new contract address
+  echo "Updating CallContract.s.sol with contract address: $contract_address"
+  cat > ~/infernet-container-starter/projects/hello-world/contracts/script/CallContract.s.sol << EOL
+// SPDX-License-Identifier: BSD-3-Clause-Clear
+pragma solidity ^0.8.13;
+
+import {Script} from "forge-std/Script.sol";
+import {SaysGM} from "../src/SaysGM.sol";
+
+contract CallContract is Script {
+    function run() public {
+        // Setup wallet
+        uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
+        vm.startBroadcast(deployerPrivateKey);
+
+        // Call the contract
+        SaysGM saysGm = SaysGM($contract_address);
+        saysGm.sayGM();
+
+        // Execute
+        vm.stopBroadcast();
+        vm.broadcast();
+    }
+}
+EOL
+
+  # Call the contract
+  echo "Calling contract to test functionality..."
+  cd ~/infernet-container-starter
+  project=hello-world make call-contract
+  
+  echo "Checking if containers are running..."
+  docker ps | grep infernet
+  
+  echo "Checking node logs..."
+  docker logs infernet-node 2>&1 | tail -n 20
+  
+  echo ""
+  echo "Press any key to return to menu..."
+  read -n 1
+}
+
+# Function to uninstall Ritual Network Infernet
+uninstall_ritual() {
+  clear
+  display_logo
+  echo "===================================================="
+  echo "     ?? UNINSTALLING RITUAL NETWORK INFERNET ??    "
+  echo "===================================================="
+  echo ""
+  
+  read -p "Are you sure you want to uninstall? (y/n): " confirm
+  if [[ "$confirm" != "y" && "$confirm" != "Y" ]]; then
+    echo "Uninstallation cancelled."
+    echo "Press any key to return to menu..."
+    read -n 1
+    return
+  fi
+  
+  echo "Stopping and removing systemd service..."
+  # Stop and disable systemd service
+  sudo systemctl stop ritual-network.service
+  sudo systemctl disable ritual-network.service
+  sudo rm /etc/systemd/system/ritual-network.service
+  sudo systemctl daemon-reload
+  
+  echo "Stopping and removing Docker containers..."
+  # Stop and remove Docker containers
+  docker compose -f ~/infernet-container-starter/deploy/docker-compose.yaml down 2>/dev/null
+  
+  # Remove the containers manually if they still exist
+  echo "Removing containers if they exist..."
+  docker rm -f infernet-fluentbit infernet-redis infernet-anvil infernet-node 2>/dev/null || true
+  
+  echo "Removing installation files..."
+  # Remove installation directories and scripts
+  rm -rf ~/infernet-container-starter
+  rm -rf ~/foundry
+  rm -f ~/ritual-service.sh
+  rm -f ~/ritual-deployment.log
+  rm -f ~/ritual-service.log
+  
+  echo "Cleaning up Docker resources..."
+  # Remove unused Docker resources
+  docker system prune -f
+  
+  echo ""
+  echo "===================================================="
+  echo "? RITUAL NETWORK INFERNET UNINSTALLATION COMPLETE ?"
+  echo "===================================================="
+  echo ""
+  echo "If you want to completely remove Docker as well, run these commands:"
+  echo "sudo apt-get purge docker-ce docker-ce-cli containerd.io"
+  echo "sudo rm -rf /var/lib/docker"
+  echo "sudo rm -rf /etc/docker"
+  echo ""
+  echo "Press any key to return to menu..."
+  read -n 1
 }
 
 # Main program
