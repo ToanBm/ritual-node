@@ -1,4 +1,11 @@
 # Ritual Infernet Node Setup
+## Auto Install:
+```
+wget https://raw.githubusercontent.com/ToanBm/ritual-node/refs/heads/main/install.sh
+chmod +x install.sh
+./install.sh
+```
+
 
 ## 0. Register wallet:
 https://basescan.org/address/0x8d871ef2826ac9001fb2e33fdd6379b6aabf449c#writeContract
